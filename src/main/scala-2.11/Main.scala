@@ -9,15 +9,19 @@ object Main {
   def main(args: Array[String]){
     val sc = new SparkContext("local[*]", "hello-spark")
 
-    val rdd = sc.textFile("./data/files/london.txt")
+    val rdd = sc.parallelize(1 to 1000, 4)
 
-    val pattern = "/[^a-zA-Z 0-9]+/g".r
-    rdd.map(pattern.replaceAllIn(_, ""))
-      .flatMap(_.split(' '))
-      .map(_.toLowerCase)
-      .map((_, 1))
-      .reduceByKey((a, b) => a + b)
-      .foreach(println)
+    val div = 2.0
+
+    val bDiv = sc.broadcast(div)
+
+    val accum = sc.accumulator(0.0)
+
+    rdd.map(_ / bDiv.value)
+      .foreach(x => accum += x)
+
+    println(accum.value)
+
 
     sc.stop()
   }
