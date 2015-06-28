@@ -1,5 +1,7 @@
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.mllib.classification.{SVMModel, SVMWithSGD}
+import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
+import org.apache.spark.mllib.util.MLUtils
 
 /**
  * Created by Ashic on 24/06/2015.
@@ -9,22 +11,31 @@ import org.apache.spark.sql.SQLContext
 object Main {
   def main(args: Array[String]){
     val sc = new SparkContext("local[*]", "hello-spark")
-    val ssc = new SQLContext(sc)
-    import ssc.implicits._ //implicit conversion between rdds and data frames
+    val data = MLUtils.loadLibSVMFile(sc, "./data/svm/sample_libsvm_data.txt")
 
-    val wb = ssc.read.json("./data/wb/world_bank.json")
+    val splits = data.randomSplit(Array(0.6, 0.4), seed = 11L)
+    val training = splits(0).cache()
+    val test = splits(1)
 
-    wb.printSchema()
-    wb.registerTempTable("world_bank")
+    val numIterations = 100
+    val model = SVMWithSGD.train(training, numIterations)
 
-    val entries = ssc.sql("SELECT grantamt from world_bank order by grantamt desc LIMIT 5")
-    entries.foreach(println)
 
-    val bdSectors =
-      wb.select(wb("sector1.Name"), wb("countrycode"), $"grantamt")
-        .filter(wb("countrycode") === "BD")
-        .orderBy($"grantamt".desc)
-    bdSectors.show(5)
+    model.clearThreshold()
+
+    val scoreAndLabels = test.map { point =>
+      val score = model.predict(point.features)
+      (score, point.label)
+    }
+
+    val metrics = new BinaryClassificationMetrics(scoreAndLabels)
+    val auROC = metrics.areaUnderROC()
+
+    println("Area under ROC = " + auROC)
+
+
+    model.save(sc, "./data/svm/model")
+    val sameModel = SVMModel.load(sc, "./data/svm/model")
 
     sc.stop()
   }
