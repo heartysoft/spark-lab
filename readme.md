@@ -1,18 +1,8 @@
 
-# Spark
+# Spark Lab
 
-* What is Spark
-* Why? 
-* Hadoop
-* HDFS
+This is a series of exercises to get you up and running on Apache Spark features. 
+Instructions can be found [here](http://heartysoft.github.io/spark-lab-instructions/Index.html)
 
-# Components
 
-* Spark Core
-* Spark SQL and DataFrames
-* Spark MLLib / Spark ML
-* Spark Streaming
-* GraphX
-* Bagel
-* SparkR
 
